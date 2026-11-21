@@ -32,6 +32,13 @@
 | TRAP-15 | ug/kg与mg/kg | 差1000倍 | 浓度统一mg/kg | `app/modules/m4_segments/rules.py` | `tests/test_segments.py::test_unit_conversion` |
 | TRAP-25 | 标准时间边界 | 双版或错版 | 采样日半开区间选版 | `app/modules/m3_versions/standards.py` | `tests/test_versions.py::test_halfopen_effective` |
 | TRAP-20 | 复检引用环 | 遍历无法结束 | 引用路径检测 | `app/modules/m5_calculate/rules.py` | `tests/test_calculate.py::test_cycle_rejected` |
+| TRAP-27 | 目录两版生效重叠 | 静默选版或整批退回 | 裁决随目录版本登记，重叠日按裁决出证，未裁决隔离 | `app/catalog.py`、`app/modules/m3_versions/standards.py` | `tests/test_catalog.py::test_overlap_without_ruling_quarantined` |
+| TRAP-28 | 目录切换中断 | 新旧目录混用 | 版本登记与生效指针同事务，中断回滚留旧版 | `app/catalog.py` | `tests/test_catalog.py::test_switch_interruption_keeps_old` |
+| TRAP-29 | 换目录重算 | 覆盖旧批次或重复建批 | 运行幂等键纳入目录身份，同目录复用批次，换目录新批次并存 | `app/manifest.py`、`app/workflow.py` | `tests/test_catalog.py::test_catalog_switch_creates_new_batch_and_keeps_records` |
+
+## 目录版本与重叠裁决
+
+限量目录按版本登记（内容+裁决哈希寻址），原始目录始终保留为首个版本。同产品同残留项目生效期重叠时，裁决以 `产品|项目→标准号` 登记在目录版本上：重叠日采样的在途批次按裁决版本出证，重叠日之外新版全面适用。未登记裁决的重叠行按 VERSION 隔离，不静默选版。目录切换为单事务：版本登记与生效指针同生同灭，中断即回滚留旧版。运行幂等键=输入字节+参数+规则版本+目录身份，同目录重跑复用批次，换目录生成新批次且旧批次原样保留。项目结论、批次等级、封存标记由同一次运行派生，共用同一目录身份与裁决记录。
 
 ## 对账规则
 

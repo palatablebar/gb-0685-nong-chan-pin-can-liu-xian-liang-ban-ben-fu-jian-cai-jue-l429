@@ -19,10 +19,13 @@ docker compose up --build -d
 - 复检裁决：`/m5_calculate`、`/api/m5_calculate`
 - 批次判级：`/m6_reconcile`、`/api/m6_reconcile`
 - 报告归档：`/m7_archive`、`/api/m7_archive`
+- 限量目录：`/api/catalog`（GET 查看当前版本与重叠，POST 切换目录并登记重叠裁决）
 
 ## 核心规则
 
 按采样日期选择有效限量，低于检出限保留区间；复检不得越过样本关联与方法适用范围。完整数值、边界和异常定义见 `docs/DATA-DICTIONARY.md`。
+
+限量目录按版本登记，原始版本不丢。两版生效期重叠时，切换目录须登记裁决（`overlap_pins: {"产品|项目":"标准号"}`）：重叠日采样的在途批次按裁决版本出证，重叠日之外新版全面适用；未裁决的重叠行按 VERSION 隔离。切换是单事务，中断留旧版；同目录重跑复用批次，换目录生成新批次。场景样例：`sample_data/limits_overlap.csv`（重叠目录）与 `sample_data/overlap_day.csv`（重叠日在途批次）。
 
 ## 验证
 

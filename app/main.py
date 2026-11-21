@@ -3,7 +3,7 @@ from flask import Flask,jsonify,request,redirect,Response
 from app.config import MODULES
 from app.errors import DomainError
 from app.workflow import run,load
-from app import store
+from app import catalog,store
 from app.web import payload
 from app.modules.m7_archive.export_out import bundle
 
@@ -30,6 +30,19 @@ def create_app():
         data=request.get_json(silent=True) or {}
         if not isinstance(data.get('version'),int):raise DomainError('VERSION','请提交复核版本')
         return jsonify(store.review(run_id,data['version'],data.get('decision')))
+    @app.get('/api/catalog')
+    def catalog_show():
+        cid,rows,pins=catalog.snapshot()
+        overlaps=catalog.find_overlaps(rows)
+        unresolved=[o for o in overlaps if o['product']+'|'+o['analyte'] not in pins]
+        return jsonify(active=cid,pins=pins,overlaps=overlaps,unresolved=unresolved,versions=catalog.history())
+    @app.post('/api/catalog')
+    def catalog_switch():
+        data=request.get_json(silent=True)
+        if not isinstance(data,dict):raise DomainError('PAYLOAD','请求必须是对象')
+        if not isinstance(data.get('csv'),str):raise DomainError('CSV','目录内容必须是文本')
+        cid,overlaps,created=catalog.activate(data['csv'],data.get('note',''),data.get('overlap_pins'))
+        return jsonify(active=cid,created=created,overlaps=overlaps,versions=catalog.history())
     @app.get('/api/archive/<run_id>/export.csv')
     def download(run_id):
         state=store.get(run_id)
